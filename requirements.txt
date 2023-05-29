@@ -1,0 +1,11 @@
+bitstring==4.0.2
+cffi==1.15.1
+cryptography==40.0.2
+ecdsa==0.18.0
+esptool==4.5.1
+Pillow==9.5.0
+pycparser==2.21
+pyserial==3.5
+reedsolo==1.6.0
+six==1.16.0
+ttkthemes==3.2.2
