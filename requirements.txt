@@ -1,11 +1,16 @@
 bitstring==4.0.2
+certifi==2023.5.7
 cffi==1.15.1
+charset-normalizer==3.1.0
 cryptography==40.0.2
 ecdsa==0.18.0
 esptool==4.5.1
+idna==3.4
 Pillow==9.5.0
 pycparser==2.21
 pyserial==3.5
 reedsolo==1.6.0
+requests==2.31.0
 six==1.16.0
 ttkthemes==3.2.2
+urllib3==2.0.2
