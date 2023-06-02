@@ -64,9 +64,6 @@ def get_deepdeck_release_info():
         messagebox.showerror("Error accesing server", "Check internet connection or try again") 
     
     return False
-    
-
-    
 
 def get_release_list():
     succesfull = get_deepdeck_release_info()
@@ -88,12 +85,12 @@ def get_release_list():
 
 # Load the emoji images
 emoji_images = {
-    "+1": Image.open("assets/thumbs-up.png"),      # Replace "thumbs_up.png" with the actual path to the image file
-    "laugh": Image.open("assets/smile.png"),    # Replace "laughing.png" with the actual path to the image file
-    "hooray": Image.open("assets/hooray.png"), # Replace "celebration.png" with the actual path to the image file
-    "heart": Image.open("assets/heart.png"),        # Replace "heart.png" with the actual path to the image file
-    "rocket": Image.open("assets/rocket.png"),      # Replace "rocket.png" with the actual path to the image file
-    "eyes": Image.open("assets/eyes.png")           # Replace "eyes.png" with the actual path to the image file
+    "+1": Image.open(resource_path("assets/thumbs_up.png")),      
+    "laugh": Image.open(resource_path("assets/smile.png")),    
+    "hooray": Image.open(resource_path("assets/hooray.png")), 
+    "heart": Image.open(resource_path("assets/heart.png")),        
+    "rocket": Image.open(resource_path("assets/rocket.png")),      
+    "eyes": Image.open(resource_path("assets/eyes.png"))           
 }
 
 # ████████ ██   ██ ██ ███    ██ ████████ ███████ ██████       █████  ██    ██ ██   ██ 
@@ -133,16 +130,11 @@ def on_version_selected(event):
     num_heart.set(release['reactions']["heart"])
     num_rocket.set(release['reactions']["rocket"])
     num_eyes.set(release['reactions']["eyes"])
-    
-
 
     name_text.set(binary_json["name"])
     date_text.set(formatted_date)
     size_text.set(formatted_megabytes)
     down_num_text.set(binary_json["download_count"])
-    # size_text.set(reactions_string)
-    # reaction_label.config(text=reactions_string)
-    # size_text.set(release["reaction"]["total_count"])
 
 
 def on_program_button_click():
@@ -190,7 +182,7 @@ def program_and_erase(erase=False):
         response = requests.get(download_url)
         if response.status_code == 200:
             # Save the asset to a file
-            with open('DeepDeck_nuevo.bin', 'wb') as file:
+            with open('DeepDeck.bin', 'wb') as file:
                 file.write(response.content)
             print('Asset downloaded successfully.')
         else:
@@ -203,11 +195,10 @@ def program_and_erase(erase=False):
 
     # Display a message to indicate the process has started
     progress_label.config(text="Programming DeepDeck..")
-    window.update_idletasks()  # Force an immediate update of the GUI
-    firmware_path = "assets/DeepDeck_single.bin"  
+    window.update_idletasks()  # Force an immediate update of the GUI 
 
     try:
-        esp_write_flash("DeepDeck_nuevo.bin")
+        esp_write_flash("DeepDeck.bin")
         progress_label.config(text="DeepDeck Ready!")
         messagebox.showinfo("Program succesfull", "You can now close this program and start enjoying DeepDeck")
     except Exception as e:
@@ -233,32 +224,6 @@ def on_erase_button_click():
         progress_label.config(text="Error while erasing occurred.")
         messagebox.showerror("Erasing Error", str(e))
 
-
-# def on_program_erase_button_click():
-#     # Display a message to indicate the process has started
-#     progress_label.config(text="Erasing DeepDeck..")
-#     window.update_idletasks()  # Force an immediate update of the GUI
-#     firmware_path = "assets/DeepDeck_single.bin"
-
-#     try:
-#         esp_erase_flash()
-
-#         # Process completed successfully
-#         progress_label.config(text="Programming DeepDeck..")
-#     except Exception as e:
-#         # An error occurred, display error message
-#         progress_label.config(text="Error while erasing occurred.")
-#         messagebox.showerror("Erasing Error", str(e))
-#         return
-#     try:
-#         esp_write_flash(firmware_path)
-#         progress_label.config(text="DeepDeck Ready!")
-#         messagebox.showinfo("Erase and Flash succesfull", "Memory erased and new binary flashed succesfully")
-#     except Exception as e:
-#         # An error occurred, display error message
-#         progress_label.config(text="Error while flashing occurred.")
-#         messagebox.showerror("Erasing Error", str(e))
-#         return
 
 def look_for_updates():
     progress_label.config(text="Looking for releases...")
@@ -308,7 +273,12 @@ window.title("DeepDeck Programmer v0.5")
 # Disable window resizing
 window.resizable(False, False)
 
-image = Image.open(resource_path("assets/background.png"))
+image = Image.open(resource_path("assets/background_3.png"))
+# Resize the image
+new_width = 684  # Specify the desired width
+new_height = 400  # Specify the desired height
+image = image.resize((new_width, new_height), Image.LANCZOS)
+
 background_image = ImageTk.PhotoImage(image)
 
 # Create a canvas widget and display the background image
@@ -435,8 +405,6 @@ erase_button.grid(row=0, column=2, padx=10, pady=10)  # Use grid layout
 # Add a label to display the progress or status
 progress_label = ttk.Label(window, text="")
 progress_label.grid(row=5, column=0, columnspan=3, sticky="e", padx=10, pady=(0, 10))
-
-
 
 
 # Start the main event loop
