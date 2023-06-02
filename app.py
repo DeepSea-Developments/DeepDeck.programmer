@@ -28,6 +28,9 @@ def esp_write_flash(firmware_path):
 def open_release_url():
     webbrowser.open(deepdeck_release_info[version_combobox.current()]['html_url'])
 
+def open_help_url():
+    webbrowser.open("https://deepdeck.co/installer/")
+
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -43,18 +46,27 @@ def get_deepdeck_release_info():
     url = f'https://api.github.com/repos/{owner}/{repo}/releases'
 
     # Send the API request
-    response = requests.get(url)
+    try:
+        response = requests.get(url)
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            # Parse the response as JSON
+            releases = response.json()
+            deepdeck_release_info = releases
+            return True
+            
+        else:
+            print(f"Error: {response.status_code}")
+            return False
+    except Exception as e:
+        # An error occurred, display error message
+        progress_label.config(text="Error while looking for updates")
+        messagebox.showerror("Error accesing server", "Check internet connection or try again") 
+    
+    return False
+    
 
-    # Check if the request was successful (status code 200)
-    if response.status_code == 200:
-        # Parse the response as JSON
-        releases = response.json()
-        deepdeck_release_info = releases
-        return True
-        
-    else:
-        print(f"Error: {response.status_code}")
-        return False
+    
 
 def get_release_list():
     succesfull = get_deepdeck_release_info()
@@ -62,10 +74,10 @@ def get_release_list():
         version_list = []
         for release in deepdeck_release_info:
             version_list.append(release['tag_name'])
-            print(release['tag_name'])
+            # print(release['tag_name'])
         return version_list
     else:
-        return ["Version 0.5.3"]
+        return []
 
 #  █████  ██    ██ ██   ██ 
 # ██   ██ ██    ██  ██ ██  
@@ -92,18 +104,16 @@ emoji_images = {
 
 
 def on_version_selected(event):
-    print("-----------------------------------------------")
-    print(deepdeck_release_info[version_combobox.current()]['body'])
-    print(deepdeck_release_info[version_combobox.current()]['reactions']['total_count'])
-    print(deepdeck_release_info[version_combobox.current()]['name'])
-    print(deepdeck_release_info[version_combobox.current()]['html_url'])
+    # print("-----------------------------------------------")
+    # print(deepdeck_release_info[version_combobox.current()]['body'])
+    # print(deepdeck_release_info[version_combobox.current()]['reactions']['total_count'])
+    # print(deepdeck_release_info[version_combobox.current()]['name'])
+    # print(deepdeck_release_info[version_combobox.current()]['html_url'])
+    # print(release['assets'])
+
 
     release = deepdeck_release_info[version_combobox.current()]
-
-    
-
     binary_json = {}
-    print(release['assets'])
     for asset in deepdeck_release_info[version_combobox.current()]['assets']:
         if asset["name"].endswith(".bin"):
             binary_json = asset
@@ -136,17 +146,38 @@ def on_version_selected(event):
 
 
 def on_program_button_click():
+    program_and_erase(erase=False)
+
+def on_program_erase_button_click():
+    program_and_erase(erase=True)
+
+
+def program_and_erase(erase=False):
+
+    if erase:
+        # Display a message to indicate the process has started
+        progress_label.config(text="Erasing DeepDeck..")
+        window.update_idletasks()  # Force an immediate update of the GUI
+        try:
+            esp_erase_flash()
+
+            # Process completed successfully
+            progress_label.config(text="DeepDeck memory erased.")
+        except Exception as e:
+            # An error occurred, display error message
+            progress_label.config(text="Error while erasing occurred.")
+            messagebox.showerror("Erasing Error", str(e))
     
     # Display a message to indicate the process has started
     progress_label.config(text="Looking for binary...")
     window.update_idletasks()  # Force an immediate update of the GUI
 
     download_url = ""
-    print(deepdeck_release_info[version_combobox.current()]['assets'])
+    # print(deepdeck_release_info[version_combobox.current()]['assets'])
     for asset in deepdeck_release_info[version_combobox.current()]['assets']:
         if asset["name"].endswith(".bin"):
             download_url = asset["browser_download_url"]
-            print(f"Valid binari found: {asset['name']}")
+            print(f"Valid binary found: {asset['name']}")
             break
 
     if download_url == "":
@@ -167,7 +198,8 @@ def on_program_button_click():
     except Exception as e:
         # An error occurred, display error message
         progress_label.config(text="Error while download binary")
-        messagebox.showerror("Binary download error", str(e)) 
+        messagebox.showerror("Binary download error", "Check your internet connection and try again") 
+        return
 
     # Display a message to indicate the process has started
     progress_label.config(text="Programming DeepDeck..")
@@ -182,6 +214,7 @@ def on_program_button_click():
         # An error occurred, display error message
         progress_label.config(text="Error while flashing occurred.")
         messagebox.showerror("Erasing Error", str(e))
+        return
 
 def on_erase_button_click():
     # Display a message to indicate the process has started
@@ -193,69 +226,71 @@ def on_erase_button_click():
 
         # Process completed successfully
         progress_label.config(text="DeepDeck memory erased.")
+        messagebox.showinfo("Erase succesfull", "Memory erased succesfully")
+
     except Exception as e:
         # An error occurred, display error message
         progress_label.config(text="Error while erasing occurred.")
         messagebox.showerror("Erasing Error", str(e))
 
-def on_program_erase_button_click():
-    # Display a message to indicate the process has started
-    progress_label.config(text="Erasing DeepDeck..")
-    window.update_idletasks()  # Force an immediate update of the GUI
-    firmware_path = "assets/DeepDeck_single.bin"
 
-    try:
-        esp_erase_flash()
+# def on_program_erase_button_click():
+#     # Display a message to indicate the process has started
+#     progress_label.config(text="Erasing DeepDeck..")
+#     window.update_idletasks()  # Force an immediate update of the GUI
+#     firmware_path = "assets/DeepDeck_single.bin"
 
-        # Process completed successfully
-        progress_label.config(text="Programming DeepDeck..")
-    except Exception as e:
-        # An error occurred, display error message
-        progress_label.config(text="Error while erasing occurred.")
-        messagebox.showerror("Erasing Error", str(e))
-        return
-    try:
-        esp_write_flash(firmware_path)
-        progress_label.config(text="DeepDeck Ready!")
-    except Exception as e:
-        # An error occurred, display error message
-        progress_label.config(text="Error while flashing occurred.")
-        messagebox.showerror("Erasing Error", str(e))
+#     try:
+#         esp_erase_flash()
+
+#         # Process completed successfully
+#         progress_label.config(text="Programming DeepDeck..")
+#     except Exception as e:
+#         # An error occurred, display error message
+#         progress_label.config(text="Error while erasing occurred.")
+#         messagebox.showerror("Erasing Error", str(e))
+#         return
+#     try:
+#         esp_write_flash(firmware_path)
+#         progress_label.config(text="DeepDeck Ready!")
+#         messagebox.showinfo("Erase and Flash succesfull", "Memory erased and new binary flashed succesfully")
+#     except Exception as e:
+#         # An error occurred, display error message
+#         progress_label.config(text="Error while flashing occurred.")
+#         messagebox.showerror("Erasing Error", str(e))
+#         return
 
 def look_for_updates():
     progress_label.config(text="Looking for releases...")
     window.update_idletasks()  # Force an immediate update of the GUI
 
     new_values = get_release_list()
-    version_combobox['values'] = new_values
-    version_combobox.current(0)
+    if len(new_values) > 0:
+        version_combobox['values'] = new_values
+        version_combobox.current(0)
 
-    # Enable button and combobox
-    program_button.config(state="normal")
-    program_erase_button.config(state="normal")
-    version_combobox.config(state="readonly")
-    name_label.config(state="normal")
-    date_label.config(state="normal")
-    size_label.config(state="normal")
-    down_num_label.config(state="normal")
-    name_entry.config(state="readonly")
-    date_entry.config(state="readonly")
-    size_entry.config(state="readonly")
-    down_num_entry.config(state="readonly")
+        # Enable button and combobox
+        program_button.config(state="normal")
+        program_erase_button.config(state="normal")
+        version_combobox.config(state="readonly")
+        name_label.config(state="normal")
+        date_label.config(state="normal")
+        size_label.config(state="normal")
+        down_num_label.config(state="normal")
+        name_entry.config(state="readonly")
+        date_entry.config(state="readonly")
+        size_entry.config(state="readonly")
+        down_num_entry.config(state="readonly")
 
-    url_button.config(state="normal")
-    # body_button.config(state="normal")
+        url_button.config(state="normal")
+        # body_button.config(state="normal")
+        # Show reation emojis
+        reactions_frame.grid(row=2, column=0,columnspan=4)
+        progress_label.config(text="")
+
+        on_version_selected("")    
 
 
-
-    # Show reation emojis
-    reactions_frame.grid(row=2, column=0,columnspan=4)
-
-
-
-    progress_label.config(text="")
-
-    on_version_selected("None")                                                                    
 
 # ████████ ██   ██ ██ ███    ██ ████████ ███████ ██████      ██    ██ ██ 
 #    ██    ██  ██  ██ ████   ██    ██    ██      ██   ██     ██    ██ ██ 
@@ -296,9 +331,8 @@ update_button = ttk.Button(window, text="Look for updates", command=look_for_upd
 update_button.grid(row=2, column=1, padx=10, pady=10)  # Use grid layout
 
 # Add a button to get help
-upload_button = ttk.Button(window, text="Help", command=look_for_updates)
+upload_button = ttk.Button(window, text="Help", command=open_help_url)
 upload_button.grid(row=2, column=2, padx=20, pady=10)  # Use grid layout
-
 
 
 # Create a frame for the release information section
