@@ -183,7 +183,7 @@ def program_and_erase(erase=False):
         response = requests.get(download_url)
         if response.status_code == 200:
             # Save the asset to a file
-            with open('DeepDeck.bin', 'wb') as file:
+            with open(resource_path('DeepDeck.bin'), 'wb') as file:
                 file.write(response.content)
             print('Asset downloaded successfully.')
         else:
@@ -199,7 +199,7 @@ def program_and_erase(erase=False):
     window.update_idletasks()  # Force an immediate update of the GUI 
 
     try:
-        esp_write_flash("DeepDeck.bin")
+        esp_write_flash(resource_path("DeepDeck.bin"))
         progress_label.config(text="DeepDeck Ready!")
         messagebox.showinfo("Program succesfull", "You can now close this program and start enjoying DeepDeck")
     except Exception as e:
