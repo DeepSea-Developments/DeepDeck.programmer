@@ -159,6 +159,7 @@ def program_and_erase(erase=False):
             # An error occurred, display error message
             progress_label.config(text="Error while erasing occurred.")
             messagebox.showerror("Erasing Error", str(e))
+            return
     
     # Display a message to indicate the process has started
     progress_label.config(text="Looking for binary...")
