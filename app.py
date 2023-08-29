@@ -276,7 +276,7 @@ def look_for_updates():
     
 # Create the main window
 window = ThemedTk(theme="breeze")
-window.title("DeepDeck Programmer v0.5")
+window.title("DeepDeck Programmer v0.51")
 
 # Load the image
 image = Image.open(resource_path("assets/background_3.png"))
