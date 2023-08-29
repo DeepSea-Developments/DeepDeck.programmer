@@ -124,12 +124,20 @@ def on_version_selected(event):
     # Format size to mega bytes"
     formatted_megabytes = "{:.2f} Mb".format(binary_json["size"] / 1048576)
 
-    num_thumbs_up.set(release['reactions']["+1"])
-    num_smile.set(release['reactions']["laugh"])
-    num_hooray.set(release['reactions']["hooray"])
-    num_heart.set(release['reactions']["heart"])
-    num_rocket.set(release['reactions']["rocket"])
-    num_eyes.set(release['reactions']["eyes"])
+    if 'reactions' in release:
+        num_thumbs_up.set(str(release['reactions'].get("+1", 0)))
+        num_smile.set(str(release['reactions'].get("laugh", 0)))
+        num_hooray.set(str(release['reactions'].get("hooray", 0)))
+        num_heart.set(str(release['reactions'].get("heart", 0)))
+        num_rocket.set(str(release['reactions'].get("rocket", 0)))
+        num_eyes.set(str(release['reactions'].get("eyes", 0)))
+    else:
+        num_thumbs_up.set("0")
+        num_smile.set("0")
+        num_hooray.set("0")
+        num_heart.set("0")
+        num_rocket.set("0")
+        num_eyes.set("0")
 
     name_text.set(binary_json["name"])
     date_text.set(formatted_date)
@@ -268,24 +276,21 @@ def look_for_updates():
     
 # Create the main window
 window = ThemedTk(theme="breeze")
-window.title("DeepDeck Programmer v0.5")
+window.title("DeepDeck Programmer v0.51")
 
-
-# Disable window resizing
-window.resizable(False, False)
-
+# Load the image
 image = Image.open(resource_path("assets/background_3.png"))
-# Resize the image
-new_width = 684  # Specify the desired width
-new_height = 400  # Specify the desired height
+new_width = 414
+new_height = 262
 image = image.resize((new_width, new_height), Image.LANCZOS)
-
 background_image = ImageTk.PhotoImage(image)
 
 # Create a canvas widget and display the background image
-canvas = Canvas(window, width=image.width, height=image.height)
-canvas.create_image(0, 0, image=background_image, anchor="nw")
-canvas.grid(row=0, column=0, columnspan=3, padx=10, pady=10)  # Use grid layout
+canvas = Canvas(window, width=new_width, height=new_height)
+canvas.create_image(new_width // 2, 0, anchor='n', image=background_image)
+canvas.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+
+
 
 # Add a label for the version selection
 version_label = ttk.Label(window, text="DeepDeck firmware version:")
@@ -349,9 +354,6 @@ url_button.grid(row=3, column=0, columnspan=4, padx=20, pady=10)  # Use grid lay
 # body_button = ttk.Button(release_frame, text="Release info", command=open_release_url,state="disable")
 # body_button.grid(row=3, column=2, columnspan=2, padx=20, pady=10)  # Use grid layout
 
-
-
-
 num_thumbs_up = tk.StringVar()
 num_smile = tk.StringVar()
 num_hooray = tk.StringVar()
@@ -407,6 +409,9 @@ erase_button.grid(row=0, column=2, padx=10, pady=10)  # Use grid layout
 progress_label = ttk.Label(window, text="")
 progress_label.grid(row=5, column=0, columnspan=3, sticky="e", padx=10, pady=(0, 10))
 
-
+# Configure the resizing behavior of the main window
+window.grid_rowconfigure(0, weight=1)
+window.grid_columnconfigure(0, weight=1)
+ 
 # Start the main event loop
 window.mainloop()
