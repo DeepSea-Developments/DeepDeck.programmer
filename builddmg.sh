@@ -5,7 +5,7 @@ mkdir -p dist/dmg
 rm -r dist/dmg/*
 # Copy the app bundle to the dmg folder.
 cp -r "dist/DeepDeck Installer" dist/dmg
-# If the DMG already exists, delete it.
+# If the DMG already exists, delete it. 
 test -f "dist/DeepDeck Installer.dmg" && rm "dist/DeepDeck Installer.dmg"
 create-dmg \
   --volname "DeepDeck Installer" \
