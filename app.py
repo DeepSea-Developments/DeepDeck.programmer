@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, Canvas, messagebox, font
+from tkinter import Menu, ttk, Canvas, messagebox, font
 from ttkthemes import ThemedTk
 from PIL import ImageTk, Image
 import esptool
@@ -8,6 +8,23 @@ import requests
 import webbrowser
 from datetime import datetime
 
+# Titles generated with https://patorjk.com//software/taag/ with font ANSI regular
+
+# ██    ██  █████  ██████  ██  █████  ██████  ██      ███████ ███████ 
+# ██    ██ ██   ██ ██   ██ ██ ██   ██ ██   ██ ██      ██      ██      
+# ██    ██ ███████ ██████  ██ ███████ ██████  ██      █████   ███████ 
+#  ██  ██  ██   ██ ██   ██ ██ ██   ██ ██   ██ ██      ██           ██ 
+#   ████   ██   ██ ██   ██ ██ ██   ██ ██████  ███████ ███████ ███████ 
+
+deepdeck_release_info = {}
+
+downloaded = 0          # Variable to know if the version was already downloaded and avoid downloading again.
+version = 0             # Variable to know the version downloaded    
+compatibility = "0.5.6" # This variable is only used for DeepDeck as the programmer was updated 
+                        # Versions below this one might not be compatible.                                                                     
+
+help_url = "https://deepdeck.co/en/QuickStartGuide/qsg-firmware-update/"
+author_git_html = "https://deepdeck.co"                                                                
 
 # ███████ ███████ ██████  ████████  ██████   ██████  ██      
 # ██      ██      ██   ██    ██    ██    ██ ██    ██ ██      
@@ -29,14 +46,16 @@ def open_release_url():
     webbrowser.open(deepdeck_release_info[version_combobox.current()]['html_url'])
 
 def open_help_url():
-    webbrowser.open("https://deepdeck.co/installer/")
+    webbrowser.open(help_url)
+    
+def open_author_url():
+    webbrowser.open(author_git_html)
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
-deepdeck_release_info = {}
 
 def get_deepdeck_release_info():
     global deepdeck_release_info
@@ -66,11 +85,24 @@ def get_deepdeck_release_info():
     return False
 
 def get_release_list():
+    global deepdeck_release_info
     succesfull = get_deepdeck_release_info()
+    curated_releases = []
     if succesfull:
         version_list = []
         for release in deepdeck_release_info:
-            version_list.append(release['tag_name'])
+            # Validate tag compatibility, and prerelease
+            if release['prerelease'] == True:
+                if prerelease.get():
+                    version_list.append("BETA " + release['tag_name'])
+                    curated_releases.append(release)
+            else:
+                version_list.append(release['tag_name'])
+                curated_releases.append(release)
+        
+        deepdeck_release_info = curated_releases
+            
+                
             # print(release['tag_name'])
         return version_list
     else:
@@ -99,16 +131,11 @@ emoji_images = {
 #    ██    ██  ██  ██ ██  ██ ██    ██    ██      ██   ██     ██   ██ ██    ██  ██ ██  
 #    ██    ██   ██ ██ ██   ████    ██    ███████ ██   ██     ██   ██  ██████  ██   ██ 
 
-
 def on_version_selected(event):
-    # print("-----------------------------------------------")
-    # print(deepdeck_release_info[version_combobox.current()]['body'])
-    # print(deepdeck_release_info[version_combobox.current()]['reactions']['total_count'])
-    # print(deepdeck_release_info[version_combobox.current()]['name'])
-    # print(deepdeck_release_info[version_combobox.current()]['html_url'])
-    # print(release['assets'])
 
-
+    global author_image
+    global author_photo
+    
     release = deepdeck_release_info[version_combobox.current()]
     binary_json = {}
     for asset in deepdeck_release_info[version_combobox.current()]['assets']:
@@ -139,10 +166,34 @@ def on_version_selected(event):
         num_rocket.set("0")
         num_eyes.set("0")
 
-    name_text.set(binary_json["name"])
+    author_name_text.set(release["author"]["login"])
     date_text.set(formatted_date)
-    size_text.set(formatted_megabytes)
     down_num_text.set(binary_json["download_count"])
+    
+    # Show author image
+    try:
+        response = requests.get(release["author"]["avatar_url"])
+        if response.status_code == 200:
+            # Save the asset to a file
+            with open(resource_path('author_avatar.jpg'), 'wb') as file:
+                file.write(response.content)
+            # print('Author Image downloaded successfully.')
+        else:
+            print(f'Error downloading image: {response.status_code}')
+    except Exception as e:
+        # An error occurred, display error message
+        progress_label.config(text="Error while download binary")
+        messagebox.showerror("Binary download error", "Check your internet connection and try again") 
+        return
+    # print(resource_path("author.jpeg"))
+    
+    author_image = Image.open(resource_path("author_avatar.jpg")).resize((100, 100)) # resize image 
+    author_photo = ImageTk.PhotoImage(author_image)
+    author_label.config(image=author_photo, state="normal")
+
+# author_label = tk.Label(reactions_frame, image=author_photo)
+#     emoji_label[i].image = emoji_photo
+#     emoji_label[i].grid(row=0, column=i*2)
 
 
 def on_program_button_click():
@@ -247,19 +298,18 @@ def look_for_updates():
         program_button.config(state="normal")
         program_erase_button.config(state="normal")
         version_combobox.config(state="readonly")
-        name_label.config(state="normal")
         date_label.config(state="normal")
-        size_label.config(state="normal")
         down_num_label.config(state="normal")
-        name_entry.config(state="readonly")
+        author_name_label.config(state="normal")
         date_entry.config(state="readonly")
-        size_entry.config(state="readonly")
         down_num_entry.config(state="readonly")
+        author_name_entry.config(state="readonly")
 
         url_button.config(state="normal")
         # body_button.config(state="normal")
+        
         # Show reation emojis
-        reactions_frame.grid(row=2, column=0,columnspan=4)
+        reactions_frame.grid(row=3, column=0,columnspan=4)
         progress_label.config(text="")
 
         on_version_selected("")    
@@ -276,7 +326,7 @@ def look_for_updates():
     
 # Create the main window
 window = ThemedTk(theme="breeze")
-window.title("DeepDeck Programmer v0.51")
+window.title("DeepDeck Programmer v0.6")
 
 # Load the image
 image = Image.open(resource_path("assets/background_3.png"))
@@ -289,8 +339,6 @@ background_image = ImageTk.PhotoImage(image)
 canvas = Canvas(window, width=new_width, height=new_height)
 canvas.create_image(new_width // 2, 0, anchor='n', image=background_image)
 canvas.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
-
-
 
 # Add a label for the version selection
 version_label = ttk.Label(window, text="DeepDeck firmware version:")
@@ -306,9 +354,15 @@ version_combobox.grid(row=2, column=0, padx=20, pady=10)  # Use grid layout
 update_button = ttk.Button(window, text="Look for updates", command=look_for_updates)
 update_button.grid(row=2, column=1, padx=10, pady=10)  # Use grid layout
 
-# Add a button to get help
-upload_button = ttk.Button(window, text="Help", command=open_help_url)
-upload_button.grid(row=2, column=2, padx=20, pady=10)  # Use grid layout
+# Add a Checkbox to allow beta releases
+
+prerelease =  tk.IntVar()    
+beta_checkbox = ttk.Checkbutton(window, text="Include Prereleases", variable = prerelease)
+beta_checkbox.grid(row=2, column=2, padx=10, pady=10)  # Use grid layout
+
+# # Add a button to get help
+# upload_button = ttk.Button(window, text="Help", command=open_help_url)
+# upload_button.grid(row=2, column=2, padx=20, pady=10)  # Use grid layout
 
 
 # Create a frame for the release information section
@@ -316,39 +370,42 @@ release_frame = ttk.Frame(window, relief="groove", borderwidth=2)
 release_frame.grid(row=3, column=0, columnspan=3, padx=10, pady=10)
 
 # Add labels for the release information
-name_label = ttk.Label(release_frame, text="Name:", state="disable")
-name_label.grid(row=0, column=0, sticky="w")
 
 date_label = ttk.Label(release_frame, text="Release date:", state="disable")
-date_label.grid(row=0, column=2, sticky="w",padx=(20,0))
+date_label.grid(row=0, column=1, sticky="w",padx=(20,0))
 
-size_label = ttk.Label(release_frame, text="Size:", state="disable")
-size_label.grid(row=1, column=0, sticky="w")
 
 down_num_label = ttk.Label(release_frame, text="Times downloaded:", state="disable")
-down_num_label.grid(row=1, column=2, sticky="w",padx=(20,0))
+down_num_label.grid(row=1, column=1, sticky="w",padx=(20,0))
+
+author_name_label = ttk.Label(release_frame, text="Author:", state="disable")
+author_name_label.grid(row=2, column=1, sticky="w",padx=(20,0))
 
 # Create non-editable text boxes for the release information
-name_text = tk.StringVar()
-name_entry = ttk.Entry(release_frame, textvariable=name_text, state="disable")
-name_entry.grid(row=0, column=1, sticky="w")
 
 date_text = tk.StringVar()
 date_entry = ttk.Entry(release_frame, textvariable=date_text, state="disable")
 date_entry.grid(row=0, column=3, sticky="w")
-
-size_text = tk.StringVar()
-size_entry = ttk.Entry(release_frame, textvariable=size_text, state="disable")
-size_entry.grid(row=1, column=1, sticky="w")
 
 # Create a label with a linked text
 down_num_text = tk.StringVar()
 down_num_entry = ttk.Entry(release_frame, textvariable=down_num_text, state="disable")
 down_num_entry.grid(row=1, column=3, sticky="w")
 
+author_name_text = tk.StringVar()
+author_name_entry = ttk.Entry(release_frame, textvariable=author_name_text, state="disable")
+author_name_entry.grid(row=2, column=3, sticky="w")
+
 # Add a button go to release website
-url_button = ttk.Button(release_frame, text="Release website", command=open_release_url, state="disable")
+url_button = ttk.Button(release_frame, text="See more info about this release", command=open_release_url, state="disable")
 url_button.grid(row=3, column=0, columnspan=4, padx=20, pady=10)  # Use grid layout
+
+# Author photo
+author_label = tk.Button(release_frame, state="disabled", command=open_author_url)
+author_label.grid(row=0, column=0, rowspan = 3, padx=20, pady=10)
+author_image = Image.open(resource_path("assets/author.png")).resize((100, 100)) # resieze image if needed
+author_photo = ImageTk.PhotoImage(author_image)
+author_label.config(image=author_photo)
 
 # # Add a button to read release info
 # body_button = ttk.Button(release_frame, text="Release info", command=open_release_url,state="disable")
@@ -377,14 +434,17 @@ num_eyes.set("0")
 
 reactions_frame = tk.Frame(release_frame)
 
+emoji_label = []
+# num_reaction_label = []
+
 # Create labels with emoji images
 for i, reaction in enumerate(emoji_images):
     emoji_image = emoji_images[reaction].resize((20, 20))  # Resize the image if needed
     emoji_photo = ImageTk.PhotoImage(emoji_image)
 
-    emoji_label = tk.Label(reactions_frame, image=emoji_photo)
-    emoji_label.image = emoji_photo
-    emoji_label.grid(row=0, column=i*2)
+    emoji_label.append(tk.Label(reactions_frame, image=emoji_photo))
+    emoji_label[i].image = emoji_photo
+    emoji_label[i].grid(row=0, column=i*2)
 
     num_reaction_label = tk.Label(reactions_frame, textvariable=reaction_array[i])
     num_reaction_label.grid(row=0, column=i*2+1,padx=(0,35), pady=10)
@@ -404,6 +464,10 @@ program_erase_button.grid(row=0, column=1, padx=10, pady=10)  # Use grid layout
 # Add a button to initiate programming
 erase_button = ttk.Button(esp_frame, text="Erase", command=on_erase_button_click)
 erase_button.grid(row=0, column=2, padx=10, pady=10)  # Use grid layout
+
+# Add a button to get help
+help_button = ttk.Button(esp_frame, text="Help", command=open_help_url)
+help_button.grid(row=0, column=3, padx=10, pady=10)  # Use grid layout
 
 # Add a label to display the progress or status
 progress_label = ttk.Label(window, text="")
