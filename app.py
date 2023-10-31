@@ -7,6 +7,7 @@ import sys, os
 import requests
 import webbrowser
 from datetime import datetime
+import csv
 
 # Titles generated with https://patorjk.com//software/taag/ with font ANSI regular
 
@@ -19,9 +20,10 @@ from datetime import datetime
 deepdeck_release_info = {}
 
 downloaded = 0          # Variable to know if the version was already downloaded and avoid downloading again.
-version = 0             # Variable to know the version downloaded    
+version = ""             # Variable to know the version downloaded    
 compatibility = "0.5.6" # This variable is only used for DeepDeck as the programmer was updated 
-                        # Versions below this one might not be compatible.                                                                     
+                        # Versions below this one might not be compatible.    
+asset_list = {}         # List of assets used to flash esp32                                                                 
 
 help_url = "https://deepdeck.co/en/QuickStartGuide/qsg-firmware-update/"
 author_git_html = "https://deepdeck.co"                                                                
@@ -40,7 +42,24 @@ def esp_erase_flash():
 def esp_write_flash(firmware_path):
     command = ['--baud', '460800', 'write_flash', '0x0', resource_path(firmware_path)]
     print('Using command %s' % ' '.join(command))
-    esptool.main(command)                                                           
+    esptool.main(command)      
+
+def esp_write_flash_advance(port,bin_dict):
+    command = ['--baud', '460800', '--before', 'default_reset', '--after', 'hard_reset', 
+               'write_flash', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect']
+    # command = ['--baud', '460800', 'write_flash', '--flash_mode', 'dio', '--flash_size', 'detect']
+    
+    for bin in bin_dict:
+        command.append(bin['memory'])
+        command.append(bin['file'])
+    
+    if port:
+        port_command = ['-p',port]
+        command = port_command + command
+    
+    print('Using command %s' % ' '.join(command))
+    esptool.main(command)
+        
 
 def open_release_url():
     webbrowser.open(deepdeck_release_info[version_combobox.current()]['html_url'])
@@ -125,6 +144,22 @@ emoji_images = {
     "eyes": Image.open(resource_path("assets/eyes.png"))           
 }
 
+def download_asset(download_url,asset_name):
+    try:
+        response = requests.get(download_url)
+        if response.status_code == 200:
+            # Save the asset to a file
+            with open(resource_path(asset_name), 'wb') as file:
+                file.write(response.content)
+            print(f'{asset_name} downloaded successfully.')
+        else:
+            print(f'Error downloading asset: {response.status_code}')
+    except Exception as e:
+        # An error occurred, display error message
+        progress_label.config(text="Error while download binary")
+        messagebox.showerror("Binary download error", "Check your internet connection and try again") 
+        return
+
 # ████████ ██   ██ ██ ███    ██ ████████ ███████ ██████       █████  ██    ██ ██   ██ 
 #    ██    ██  ██  ██ ████   ██    ██    ██      ██   ██     ██   ██ ██    ██  ██ ██  
 #    ██    █████   ██ ██ ██  ██    ██    █████   ██████      ███████ ██    ██   ███   
@@ -135,21 +170,47 @@ def on_version_selected(event):
 
     global author_image
     global author_photo
+    global author_git_html
+    global asset_list
+    
+    programmer_found = False # This flag show if programmer.csv was found or not. It is vital for the usage of this verision of the software
+    
+    asset_list = []
     
     release = deepdeck_release_info[version_combobox.current()]
-    binary_json = {}
+    
+    partition_table = {}
     for asset in deepdeck_release_info[version_combobox.current()]['assets']:
         if asset["name"].endswith(".bin"):
-            binary_json = asset
-            break
+            asset_list.append(asset)
+            print(asset["name"])
+            
+        elif asset["name"] == "programmer.csv":
+            print("Found partition table") 
+            asset_list.append(asset)
+            partition_table = asset
+            programmer_found = True
+    
+    if programmer_found == False:
+        program_button.config(state="disable") 
+        program_erase_button.config(state="disable")
+        # Display a message to indicate the process has started
+        progress_label.config(text="Version not compatible")
+        window.update_idletasks()  # Force an immediate update of the GUI
+    else:
+        program_button.config(state="normal") 
+        program_erase_button.config(state="normal")
+        progress_label.config(text="")
+        window.update_idletasks()  # Force an immediate update of the GUI
+
+    
+    author_git_html = release["author"]["html_url"]
     
     # Convert string to datetime object
     datetime_obj = datetime.strptime(release["published_at"], "%Y-%m-%dT%H:%M:%SZ")
     # Format the datetime object as "May 11, 2023"
     formatted_date = datetime_obj.strftime("%B %d, %Y")
 
-    # Format size to mega bytes"
-    formatted_megabytes = "{:.2f} Mb".format(binary_json["size"] / 1048576)
 
     if 'reactions' in release:
         num_thumbs_up.set(str(release['reactions'].get("+1", 0)))
@@ -168,7 +229,7 @@ def on_version_selected(event):
 
     author_name_text.set(release["author"]["login"])
     date_text.set(formatted_date)
-    down_num_text.set(binary_json["download_count"])
+    down_num_text.set(asset_list[0]["download_count"])
     
     # Show author image
     try:
@@ -191,10 +252,6 @@ def on_version_selected(event):
     author_photo = ImageTk.PhotoImage(author_image)
     author_label.config(image=author_photo, state="normal")
 
-# author_label = tk.Label(reactions_frame, image=author_photo)
-#     emoji_label[i].image = emoji_photo
-#     emoji_label[i].grid(row=0, column=i*2)
-
 
 def on_program_button_click():
     program_and_erase(erase=False)
@@ -204,14 +261,16 @@ def on_program_erase_button_click():
 
 
 def program_and_erase(erase=False):
-
+    
+    global asset_list
+    global version
+    
     if erase:
         # Display a message to indicate the process has started
         progress_label.config(text="Erasing DeepDeck..")
         window.update_idletasks()  # Force an immediate update of the GUI
         try:
             esp_erase_flash()
-
             # Process completed successfully
             progress_label.config(text="DeepDeck memory erased.")
         except Exception as e:
@@ -238,27 +297,31 @@ def program_and_erase(erase=False):
         messagebox.showerror("Binary not found", str(e))
         return
 
-    try:
-        response = requests.get(download_url)
-        if response.status_code == 200:
-            # Save the asset to a file
-            with open(resource_path('DeepDeck.bin'), 'wb') as file:
-                file.write(response.content)
-            print('Asset downloaded successfully.')
-        else:
-            print(f'Error downloading asset: {response.status_code}')
-    except Exception as e:
-        # An error occurred, display error message
-        progress_label.config(text="Error while download binary")
-        messagebox.showerror("Binary download error", "Check your internet connection and try again") 
-        return
+    # Verify if asset was already downloaded for this version
+    # TODO: verify if already downloaded changing versions
+    if version == version_combobox.current():
+        print("Assets already downloaded. Skip step")
+    else:
+        print("Downloading assets")
+        for asset in asset_list:
+            download_asset(asset["browser_download_url"],asset['name'])
+        version = version_combobox.current()
 
+    binary_dict_list = []
+    with open('programmer.csv', newline='') as csvfile:
+        binary_dict = csv.DictReader(csvfile)
+        for row in binary_dict:
+            binary_dict_list.append(row)
+            print(row)
+    
     # Display a message to indicate the process has started
     progress_label.config(text="Programming DeepDeck..")
     window.update_idletasks()  # Force an immediate update of the GUI 
-
+    
     try:
-        esp_write_flash(resource_path("DeepDeck.bin"))
+        # TODO: Add port support
+        esp_write_flash_advance(None,binary_dict_list)
+        # esp_write_flash(resource_path("DeepDeck.bin"))
         progress_label.config(text="DeepDeck Ready!")
         messagebox.showinfo("Program succesfull", "You can now close this program and start enjoying DeepDeck")
     except Exception as e:
