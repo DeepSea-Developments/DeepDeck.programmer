@@ -499,7 +499,7 @@ window.title("DeepDeck Programmer v0.6.0")
 # Load the image
 image = Image.open(resource_path("assets/background_3.png"))
 new_width = 414
-new_height = 262
+new_height = 242
 image = image.resize((new_width, new_height), Image.LANCZOS)
 background_image = ImageTk.PhotoImage(image)
 
