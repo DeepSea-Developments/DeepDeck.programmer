@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import Menu, ttk, Canvas, messagebox, font
+from tkinter import Menu, ttk, Canvas, messagebox, font, filedialog
 from ttkthemes import ThemedTk
 from PIL import ImageTk, Image
 import esptool
@@ -19,10 +19,7 @@ import csv
 
 deepdeck_release_info = {}
 
-downloaded = 0          # Variable to know if the version was already downloaded and avoid downloading again.
-version = ""             # Variable to know the version downloaded    
-compatibility = "0.5.6" # This variable is only used for DeepDeck as the programmer was updated 
-                        # Versions below this one might not be compatible.    
+version = ""             # Variable to know the version downloaded and avoid redownloading the same version      
 asset_list = {}         # List of assets used to flash esp32                                                                 
 
 help_url = "https://deepdeck.co/en/QuickStartGuide/qsg-firmware-update/"
@@ -59,6 +56,13 @@ def esp_write_flash_advance(port,bin_dict):
     
     print('Using command %s' % ' '.join(command))
     esptool.main(command)
+
+def esp_read_all_flash(folder):
+    file = folder + "/DeepDeck_download.bin"
+    command = ['--baud', '460800', 'read_flash', '0x0', '0x400000', file]
+    print('Using command %s' % ' '.join(command))
+    esptool.main(command) 
+
         
 
 def open_release_url():
@@ -166,12 +170,53 @@ def download_asset(download_url,asset_name):
 #    ██    ██  ██  ██ ██  ██ ██    ██    ██      ██   ██     ██   ██ ██    ██  ██ ██  
 #    ██    ██   ██ ██ ██   ████    ██    ███████ ██   ██     ██   ██  ██████  ██   ██ 
 
+
+
+def on_download_firmware():
+    folder = filedialog.askdirectory(initialdir = ".", title = "Select folder to store DeepDeck_download.bin")
+    print (folder)
+    
+    progress_label.config(text="Reading DeepDeck memory. This can take a while...")
+    window.update_idletasks()  # Force an immediate update of the GUI
+    
+    try:
+        esp_read_all_flash(folder)
+        # Process completed successfully
+        progress_label.config(text="Firmware stored")
+        messagebox.showinfo("Firmware download successfully", "File stored in" + folder)
+
+    except Exception as e:
+        # An error occurred, display error message
+        progress_label.config(text="Error while reading occurred.")
+        messagebox.showerror("Reading memory error", str(e))
+
+def on_upload_firmware():
+    file = filedialog.askopenfilename(initialdir = ".",title = "Select file",filetypes = (("binary files","*.bin"),("all files","*.*")))
+    print (file)
+    
+    progress_label.config(text="Programming DeepDeck. This can take a while...")
+    window.update_idletasks()  # Force an immediate update of the GUI
+    
+    try:
+        esp_write_flash(file)
+        # Process completed successfully
+        progress_label.config(text="Firmware updated!")
+        messagebox.showinfo("Firmware uploaded succesfull", "yey!, memory programmed succesfully")
+
+    except Exception as e:
+        # An error occurred, display error message
+        progress_label.config(text="Error while programming occurred.")
+        messagebox.showerror("flashing memory error", str(e))
+
 def on_version_selected(event):
 
     global author_image
     global author_photo
     global author_git_html
     global asset_list
+    
+    global emoji_label
+    global num_reaction_label
     
     programmer_found = False # This flag show if programmer.csv was found or not. It is vital for the usage of this verision of the software
     
@@ -211,21 +256,74 @@ def on_version_selected(event):
     # Format the datetime object as "May 11, 2023"
     formatted_date = datetime_obj.strftime("%B %d, %Y")
 
+    # global emoji_label
+    # global num_reaction_label
 
     if 'reactions' in release:
-        num_thumbs_up.set(str(release['reactions'].get("+1", 0)))
-        num_smile.set(str(release['reactions'].get("laugh", 0)))
-        num_hooray.set(str(release['reactions'].get("hooray", 0)))
-        num_heart.set(str(release['reactions'].get("heart", 0)))
-        num_rocket.set(str(release['reactions'].get("rocket", 0)))
-        num_eyes.set(str(release['reactions'].get("eyes", 0)))
+        reactions_frame.grid()
+        # Thubms Up
+        if release['reactions'].get("+1", 0) > 0:
+            num_thumbs_up.set(str(release['reactions'].get("+1", 0)))
+            emoji_label[0].grid()
+            num_reaction_label[0].grid()
+        else:
+            emoji_label[0].grid_remove()
+            num_reaction_label[0].grid_remove()
+        
+        # Laugh
+        if release['reactions'].get("laugh", 0) > 0:
+            num_smile.set(str(release['reactions'].get("laugh", 0)))
+            emoji_label[1].grid()
+            num_reaction_label[1].grid()
+        else:
+            emoji_label[1].grid_remove()
+            num_reaction_label[1].grid_remove()
+            
+        # Hooray
+        if release['reactions'].get("hooray", 0) > 0:
+            num_hooray.set(str(release['reactions'].get("hooray", 0)))
+            emoji_label[2].grid()
+            num_reaction_label[2].grid()
+        else:
+            emoji_label[2].grid_remove()
+            num_reaction_label[2].grid_remove()
+            
+        # <3
+        if release['reactions'].get("heart", 0) > 0:
+            num_heart.set(str(release['reactions'].get("heart", 0)))
+            emoji_label[3].grid()
+            num_reaction_label[3].grid()
+        else:
+            emoji_label[3].grid_remove()
+            num_reaction_label[3].grid_remove()
+        
+        # Rocket
+        if release['reactions'].get("rocket", 0) > 0:
+            num_rocket.set(str(release['reactions'].get("rocket", 0)))
+            emoji_label[4].grid()
+            num_reaction_label[4].grid()
+        else:
+            emoji_label[4].grid_remove()
+            num_reaction_label[4].grid_remove()
+        
+        # Eyes
+        if release['reactions'].get("eyes", 0) > 0:
+            num_eyes.set(str(release['reactions'].get("eyes", 0)))
+            emoji_label[5].grid()
+            num_reaction_label[5].grid()
+        else:
+            emoji_label[5].grid_remove()
+            num_reaction_label[5].grid_remove()
+            
+        
     else:
-        num_thumbs_up.set("0")
-        num_smile.set("0")
-        num_hooray.set("0")
-        num_heart.set("0")
-        num_rocket.set("0")
-        num_eyes.set("0")
+        reactions_frame.grid_remove()
+        # num_thumbs_up.set("0")
+        # num_smile.set("0")
+        # num_hooray.set("0")
+        # num_heart.set("0")
+        # num_rocket.set("0")
+        # num_eyes.set("0")
 
     author_name_text.set(release["author"]["login"])
     date_text.set(formatted_date)
@@ -298,7 +396,6 @@ def program_and_erase(erase=False):
         return
 
     # Verify if asset was already downloaded for this version
-    # TODO: verify if already downloaded changing versions
     if version == version_combobox.current():
         print("Assets already downloaded. Skip step")
     else:
@@ -318,9 +415,12 @@ def program_and_erase(erase=False):
     progress_label.config(text="Programming DeepDeck..")
     window.update_idletasks()  # Force an immediate update of the GUI 
     
+    port = None
+    if advance_mode.get():
+        port = port_text.get()
+        print(port)
     try:
-        # TODO: Add port support
-        esp_write_flash_advance(None,binary_dict_list)
+        esp_write_flash_advance(port,binary_dict_list)
         # esp_write_flash(resource_path("DeepDeck.bin"))
         progress_label.config(text="DeepDeck Ready!")
         messagebox.showinfo("Program succesfull", "You can now close this program and start enjoying DeepDeck")
@@ -372,11 +472,16 @@ def look_for_updates():
         # body_button.config(state="normal")
         
         # Show reation emojis
-        reactions_frame.grid(row=3, column=0,columnspan=4)
+        # reactions_frame.grid(row=3, column=0,columnspan=4)
         progress_label.config(text="")
 
         on_version_selected("")    
 
+def toggle_advance_mode():
+    if advance_mode.get():
+        inside_advanced_frame.grid()
+    else:
+        inside_advanced_frame.grid_remove()
 
 
 # ████████ ██   ██ ██ ███    ██ ████████ ███████ ██████      ██    ██ ██ 
@@ -389,7 +494,7 @@ def look_for_updates():
     
 # Create the main window
 window = ThemedTk(theme="breeze")
-window.title("DeepDeck Programmer v0.6")
+window.title("DeepDeck Programmer v0.6.0")
 
 # Load the image
 image = Image.open(resource_path("assets/background_3.png"))
@@ -418,7 +523,6 @@ update_button = ttk.Button(window, text="Look for updates", command=look_for_upd
 update_button.grid(row=2, column=1, padx=10, pady=10)  # Use grid layout
 
 # Add a Checkbox to allow beta releases
-
 prerelease =  tk.IntVar()    
 beta_checkbox = ttk.Checkbutton(window, text="Include Prereleases", variable = prerelease)
 beta_checkbox.grid(row=2, column=2, padx=10, pady=10)  # Use grid layout
@@ -496,9 +600,11 @@ num_rocket.set("0")
 num_eyes.set("0")
 
 reactions_frame = tk.Frame(release_frame)
+reactions_frame.grid(row=4, column=0,columnspan=4)
+reactions_frame.grid_remove()
 
 emoji_label = []
-# num_reaction_label = []
+num_reaction_label = []
 
 # Create labels with emoji images
 for i, reaction in enumerate(emoji_images):
@@ -509,12 +615,41 @@ for i, reaction in enumerate(emoji_images):
     emoji_label[i].image = emoji_photo
     emoji_label[i].grid(row=0, column=i*2)
 
-    num_reaction_label = tk.Label(reactions_frame, textvariable=reaction_array[i])
-    num_reaction_label.grid(row=0, column=i*2+1,padx=(0,35), pady=10)
+    num_reaction_label.append(tk.Label(reactions_frame, textvariable=reaction_array[i]))
+    num_reaction_label[i].grid(row=0, column=i*2+1,padx=(0,35), pady=10)
+
+# Create a frame for advance options
+advanced_frame = ttk.Frame(window)
+advanced_frame.grid(row=4, column=0, columnspan=3, padx=10, pady=5)
+
+advance_mode =  tk.IntVar()    
+advanced_mode_checkbox = ttk.Checkbutton(advanced_frame, text="Advanced mode", variable = advance_mode, command=toggle_advance_mode)
+advanced_mode_checkbox.grid(row=0, column=0, padx=10, pady=10)  # Use grid layout
+
+# Create a frame for  inside advance options
+inside_advanced_frame = ttk.Frame(advanced_frame)
+inside_advanced_frame.grid(row=1, column=0, padx=10, pady=5)
+inside_advanced_frame.grid_remove()
+
+port_label = ttk.Label(inside_advanced_frame, text="Port:")
+port_label.grid(row=0, column=0, sticky="w",padx=(20,0))
+
+port_text = tk.StringVar()
+port_entry = ttk.Entry(inside_advanced_frame, textvariable=port_text)
+port_entry.grid(row=0, column=1, sticky="w")
+
+# Add a button to initiate programming
+download_button = ttk.Button(inside_advanced_frame, text="Dowload firmware form DeepDeck", command=on_download_firmware)
+download_button.grid(row=1, column=0, columnspan=2,padx=10, pady=10)  # Use grid layout
+
+# Add a button to initiate programming
+upload_button = ttk.Button(inside_advanced_frame, text="Upload firmware to DeepDeck", command=on_upload_firmware)
+upload_button.grid(row=1, column=2, columnspan=2, padx=10, pady=10)  # Use grid layout
+
 
 # Create a frame for DeepDeck programming options
 esp_frame = ttk.Frame(window)
-esp_frame.grid(row=4, column=0, columnspan=3, padx=10, pady=5)
+esp_frame.grid(row=5, column=0, columnspan=3, padx=10, pady=5)
 
 # Add a button to initiate programming
 program_button = ttk.Button(esp_frame, text="Program", command=on_program_button_click,state="disabled")
@@ -534,7 +669,7 @@ help_button.grid(row=0, column=3, padx=10, pady=10)  # Use grid layout
 
 # Add a label to display the progress or status
 progress_label = ttk.Label(window, text="")
-progress_label.grid(row=5, column=0, columnspan=3, sticky="e", padx=10, pady=(0, 10))
+progress_label.grid(row=6, column=0, columnspan=3, sticky="e", padx=10, pady=(0, 10))
 
 # Configure the resizing behavior of the main window
 window.grid_rowconfigure(0, weight=1)
