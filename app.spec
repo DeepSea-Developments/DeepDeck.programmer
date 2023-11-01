@@ -8,7 +8,7 @@ a = Analysis(
     ['app.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets'),('esptool/targets/stub_flasher/*.json','/esptool/./targets/stub_flasher')],
+    datas=[('assets', 'assets'),('esptool/targets/stub_flasher/*.json','esptool/./targets/stub_flasher')],
     hiddenimports=['PIL._tkinter_finder'],
     hookspath=[],
     hooksconfig={},

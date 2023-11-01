@@ -48,7 +48,7 @@ def esp_write_flash_advance(port,bin_dict):
     
     for bin in bin_dict:
         command.append(bin['memory'])
-        command.append(bin['file'])
+        command.append(resource_path(bin['file']))
     
     if port:
         port_command = ['-p',port]
@@ -405,7 +405,7 @@ def program_and_erase(erase=False):
         version = version_combobox.current()
 
     binary_dict_list = []
-    with open('programmer.csv', newline='') as csvfile:
+    with open(resource_path('programmer.csv'), newline='') as csvfile:
         binary_dict = csv.DictReader(csvfile)
         for row in binary_dict:
             binary_dict_list.append(row)
