@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import Menu, ttk, Canvas, messagebox, font, filedialog
+from tkinter.messagebox import askyesno
 from ttkthemes import ThemedTk
 from PIL import ImageTk, Image
 import esptool
@@ -59,7 +60,8 @@ def esp_write_flash_advance(port,bin_dict):
 
 def esp_read_all_flash(folder):
     file = folder + "/DeepDeck_download.bin"
-    command = ['--baud', '460800', 'read_flash', '0x0', '0x400000', file]
+    command = ['--baud', '460800', '--before', 'default_reset', '--after', 'hard_reset',
+               'read_flash', '0x0', '0x400000', file]
     print('Using command %s' % ' '.join(command))
     esptool.main(command) 
 
@@ -173,8 +175,11 @@ def download_asset(download_url,asset_name):
 
 
 def on_download_firmware():
+    folder = None
     folder = filedialog.askdirectory(initialdir = ".", title = "Select folder to store DeepDeck_download.bin")
-    print (folder)
+    if len(folder) == 0:
+        print("Canceled")
+        return
     
     progress_label.config(text="Reading DeepDeck memory. This can take a while...")
     window.update_idletasks()  # Force an immediate update of the GUI
@@ -192,7 +197,13 @@ def on_download_firmware():
 
 def on_upload_firmware():
     file = filedialog.askopenfilename(initialdir = ".",title = "Select file",filetypes = (("binary files","*.bin"),("all files","*.*")))
+    
+    if len(file) == 0:
+        print("Canceled")
+        return
+
     print (file)
+
     
     progress_label.config(text="Programming DeepDeck. This can take a while...")
     window.update_idletasks()  # Force an immediate update of the GUI
@@ -355,6 +366,13 @@ def on_program_button_click():
     program_and_erase(erase=False)
 
 def on_program_erase_button_click():
+    
+    answer = askyesno(title= 'Do you want to erase and program?',
+                    message= "This action will erase the whole DeepDeck memory including any setting or layer modified \n\n Do you want to proceed?")
+    
+    if not(answer):
+        return
+    
     program_and_erase(erase=True)
 
 
@@ -431,6 +449,13 @@ def program_and_erase(erase=False):
         return
 
 def on_erase_button_click():
+    
+    answer = askyesno(title= 'Do you want to erase the whole memory?',
+                    message= "This action will erase the whole DeepDeck memory including any setting or layer modified \n\n Do you want to proceed?")
+    
+    if not(answer):
+        return
+    
     # Display a message to indicate the process has started
     progress_label.config(text="Erasing DeepDeck..")
     window.update_idletasks()  # Force an immediate update of the GUI
@@ -646,6 +671,10 @@ download_button.grid(row=1, column=0, columnspan=2,padx=10, pady=10)  # Use grid
 upload_button = ttk.Button(inside_advanced_frame, text="Upload firmware to DeepDeck", command=on_upload_firmware)
 upload_button.grid(row=1, column=2, columnspan=2, padx=10, pady=10)  # Use grid layout
 
+# Add a button to initiate programming
+erase_button = ttk.Button(inside_advanced_frame, text="Erase", command=on_erase_button_click)
+erase_button.grid(row=2, column=0, columnspan=2, padx=10, pady=10)  # Use grid layout
+
 
 # Create a frame for DeepDeck programming options
 esp_frame = ttk.Frame(window)
@@ -658,10 +687,6 @@ program_button.grid(row=0, column=0, padx=10, pady=10)  # Use grid layout
 # Add a button to initiate programming
 program_erase_button = ttk.Button(esp_frame, text="Erase and Program", command=on_program_erase_button_click, state="disabled")
 program_erase_button.grid(row=0, column=1, padx=10, pady=10)  # Use grid layout
-
-# Add a button to initiate programming
-erase_button = ttk.Button(esp_frame, text="Erase", command=on_erase_button_click)
-erase_button.grid(row=0, column=2, padx=10, pady=10)  # Use grid layout
 
 # Add a button to get help
 help_button = ttk.Button(esp_frame, text="Help", command=open_help_url)
